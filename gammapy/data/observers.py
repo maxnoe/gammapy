@@ -1,8 +1,14 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Location of gamma-ray observatories."""
+from astropy import units as u
 from astropy.coordinates import EarthLocation
 
-__all__ = ["observatory_locations"]
+__all__ = [
+    "observatory_locations",
+    "earth_location_from_gadf_irf_header",
+    "earth_location_from_gadf_events_header",
+    "earth_location_to_gadf_events_header",
+]
 
 
 observatory_locations = {}
@@ -98,4 +104,49 @@ observatory_locations["whipple"] = EarthLocation(
 observatory_locations["astri"] = EarthLocation(
     lon="-16d30m20.99s", lat="28d17m60.0s", height="2370m"
 )
+
+
+def earth_location_from_gadf_irf_header(header):
+    """Create `~astropy.coordinates.EarthLocation` from FITS header dict."""
+    # Necessary for DataStore, but they should be ALT and AZ instead!
+    telescope = header["TELESCOP"]
+    instrument = header["INSTRUME"]
+    if telescope == "CTA":
+        if instrument == "Southern Array":
+            loc = observatory_locations["cta_south"]
+        elif instrument == "Northern Array":
+            loc = observatory_locations["cta_north"]
+        else:
+            loc = observatory_locations["cta_south"]
+
+    else:
+        loc = observatory_locations[telescope.lower()]
+
+    return loc
+
+
+def earth_location_from_gadf_events_header(header):
+    """Create `~astropy.coordinates.EarthLocation` from FITS header dict."""
+    lon = u.Quantity(header["GEOLON"], "deg")
+    lat = u.Quantity(header["GEOLAT"], "deg")
+    # TODO: should we support both here?
+    # Check latest spec if ALTITUDE is used somewhere.
+    if "GEOALT" in header:
+        height = u.Quantity(header["GEOALT"], "meter")
+    elif "ALTITUDE" in header:
+        height = u.Quantity(header["ALTITUDE"], "meter")
+    else:
+        raise KeyError("The GEOALT or ALTITUDE header keyword must be set")
+
+    return EarthLocation(lon=lon, lat=lat, height=height)
+
+
+def earth_location_to_gadf_events_header(earth_location):
+    """Create dict from EarthLocation"""
+    # TODO: add version handling
+    meta = {}
+    meta["GEOLON"] = earth_location.lon.deg
+    meta["GEOLAT"] = earth_location.lat.deg
+    meta["ALTITUDE"] = earth_location.height.to_value("meter")
+    return meta
 

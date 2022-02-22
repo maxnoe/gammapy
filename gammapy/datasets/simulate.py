@@ -5,7 +5,7 @@ import astropy.units as u
 from astropy.coordinates import AltAz, SkyCoord, SkyOffsetFrame
 from astropy.table import Table
 import gammapy
-from gammapy.data import EventList, observatory_locations
+from gammapy.data import EventList, earth_location_from_gadf_irf_header
 from gammapy.maps import MapCoord
 from gammapy.modeling.models import ConstantTemporalModel
 from gammapy.utils.random import get_random_state
@@ -299,20 +299,7 @@ class MapDatasetEventSampler:
             meta["MMN{:05d}".format(idx + 1)] = model.name
         meta["NMCIDS"] = len(dataset.models)
 
-        # Necessary for DataStore, but they should be ALT and AZ instead!
-        telescope = observation.aeff.meta["TELESCOP"]
-        instrument = observation.aeff.meta["INSTRUME"]
-        if telescope == "CTA":
-            if instrument == "Southern Array":
-                loc = observatory_locations["cta_south"]
-            elif instrument == "Northern Array":
-                loc = observatory_locations["cta_north"]
-            else:
-                loc = observatory_locations["cta_south"]
-
-        else:
-            loc = observatory_locations[telescope.lower()]
-
+        loc = observation.fixed_pointing_info.location
         # this is not really correct but maybe OK for now
         altaz_frame = AltAz(obstime=dataset.gti.time_start, location=loc)
         coord_altaz = observation.pointing_radec.transform_to(altaz_frame)

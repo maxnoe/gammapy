@@ -240,7 +240,7 @@ def test_observation_cta_1dc():
     assert_skycoord_allclose(obs.pointing_radec, pointing.icrs)
     assert_allclose(obs.observation_live_time_duration, 0.9 * livetime)
     assert_allclose(obs.target_radec.ra, np.nan)
-    assert_allclose(obs.pointing_zen, np.nan)
+    assert_allclose(obs.pointing_zen, 123.228215 * u.deg)
     assert_allclose(obs.muoneff, 1)
 
 

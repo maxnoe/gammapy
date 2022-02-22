@@ -1,12 +1,14 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import scipy.interpolate
+import numpy as np
 from astropy.coordinates import AltAz, CartesianRepresentation, SkyCoord
 from astropy.table import Table
 from astropy.units import Quantity
 from astropy.utils import lazyproperty
-from gammapy.utils.fits import earth_location_from_dict
 from gammapy.utils.scripts import make_path
 from gammapy.utils.time import time_ref_from_dict
+from .observers import earth_location_from_gadf_events_header
+
 
 __all__ = ["FixedPointingInfo", "PointingInfo"]
 
@@ -82,7 +84,7 @@ class FixedPointingInfo:
     @lazyproperty
     def location(self):
         """Observatory location (`~astropy.coordinates.EarthLocation`)."""
-        return earth_location_from_dict(self.meta)
+        return earth_location_from_gadf_events_header(self.meta)
 
     @lazyproperty
     def time_ref(self):
@@ -117,8 +119,8 @@ class FixedPointingInfo:
     @lazyproperty
     def radec(self):
         """RA/DEC pointing position from table (`~astropy.coordinates.SkyCoord`)."""
-        ra = self.meta["RA_PNT"]
-        dec = self.meta["DEC_PNT"]
+        ra = self.meta.get("RA_PNT", np.nan)
+        dec = self.meta.get("DEC_PNT", np.nan)
         return SkyCoord(ra, dec, unit="deg", frame="icrs")
 
     @lazyproperty
@@ -229,7 +231,7 @@ class PointingInfo:
     @lazyproperty
     def location(self):
         """Observatory location (`~astropy.coordinates.EarthLocation`)."""
-        return earth_location_from_dict(self.table.meta)
+        return earth_location_from_gadf_events_header(self.table.meta)
 
     @lazyproperty
     def time_ref(self):

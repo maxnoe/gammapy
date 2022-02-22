@@ -400,14 +400,14 @@ def test_analysis_3d_joint_datasets():
 
     assert_allclose(
         analysis.datasets[0].background_model.spectral_model.norm.value,
-        1.031743694988066,
+        1.031744, rtol=1e-5
     )
     assert_allclose(
-        analysis.datasets[0].background_model.spectral_model.tilt.value, 0.0
+        analysis.datasets[0].background_model.spectral_model.tilt.value, 0.0, atol=1e-5
     )
     assert_allclose(
         analysis.datasets[1].background_model.spectral_model.norm.value,
-        0.9776349021876344,
+        0.977634, rtol=1e-5
     )
 
 

@@ -9,10 +9,10 @@ from astropy.table import Table
 from astropy.table import vstack as vstack_tables
 from astropy.visualization import quantity_support
 from gammapy.maps import MapAxis, MapCoord, RegionGeom, WcsNDMap
-from gammapy.utils.fits import earth_location_from_dict
 from gammapy.utils.scripts import make_path
 from gammapy.utils.testing import Checker
 from gammapy.utils.time import time_ref_from_dict
+from .observers import earth_location_from_gadf_events_header
 
 __all__ = ["EventList"]
 
@@ -563,7 +563,7 @@ class EventList:
     @property
     def observatory_earth_location(self):
         """Observatory location (`~astropy.coordinates.EarthLocation`)."""
-        return earth_location_from_dict(self.table.meta)
+        return earth_location_from_gadf_events_header(self.table.meta)
 
     @property
     def observation_time_duration(self):

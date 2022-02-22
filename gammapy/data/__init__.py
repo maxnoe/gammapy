@@ -7,7 +7,7 @@ from .gti import GTI
 from .hdu_index_table import HDUIndexTable
 from .obs_table import ObservationTable
 from .observations import Observation, Observations
-from .observers import observatory_locations
+from .observers import observatory_locations, earth_location_from_gadf_irf_header
 from .pointing import FixedPointingInfo, PointingInfo
 
 
@@ -22,5 +22,6 @@ __all__ = [
     "Observations",
     "ObservationTable",
     "observatory_locations",
+    "earth_location_from_gadf_irf_header",
     "PointingInfo",
 ]

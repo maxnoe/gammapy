@@ -8,11 +8,13 @@ from astropy.time import Time
 from astropy.units import Quantity
 from gammapy.utils.fits import LazyFitsData
 from gammapy.utils.testing import Checker
+from gammapy.utils.time import time_ref_to_dict
 from astropy.utils import lazyproperty
 from .event_list import EventList, EventListChecker
 from .filters import ObservationFilter
 from .gti import GTI
 from .pointing import FixedPointingInfo
+from .observers import earth_location_from_gadf_irf_header, earth_location_to_gadf_events_header
 
 __all__ = ["Observation", "Observations"]
 
@@ -69,7 +71,6 @@ class Observation:
         obs_filter=None,
     ):
         self.obs_id = obs_id
-        self.obs_info = obs_info
         self.aeff = aeff
         self.edisp = edisp
         self.psf = psf
@@ -77,11 +78,24 @@ class Observation:
         self._rad_max = rad_max
         self._gti = gti
         self._events = events
+        self._obs_info = obs_info or {}
         self.obs_filter = obs_filter or ObservationFilter()
 
+    @property
+    def obs_info(self):
+        """Observation info (`dict`)"""
+        # TODO: self.obs_info can either store user created in memory info or
+        #  read from the event header. Check how to handle theses cases correctly.
+
+        # this checks the existence of the event hdu location, without loading events
+        if hasattr(self, "__events_hdu"):
+            self._obs_info.update(self.events.table.meta)
+
+        return self._obs_info
 
     @property
     def rad_max(self):
+        """Rad max table (`RadMax2D`)"""
         # prevent circular import
         from gammapy.irf import RadMax2D
 
@@ -124,14 +138,24 @@ class Observation:
         gti = self.obs_filter.filter_gti(self._gti)
         return gti
 
+    # TODO: don't use GADF internally as format, however this will useful for
+    #  writing event lists in GADF format, but should resolve the code duplication with
+    #  MapDatasetEventSampler.event_list_meta
     @staticmethod
-    def _get_obs_info(pointing, deadtime_fraction):
-        """Create obs info dict from in memory data"""
-        return {
-            "RA_PNT": pointing.icrs.ra.deg,
-            "DEC_PNT": pointing.icrs.dec.deg,
-            "DEADC": 1 - deadtime_fraction,
-        }
+    def _get_obs_info_gadf(
+        pointing, deadtime_fraction, reference_time, tstart, tstop, aeff
+    ):
+        """Create GADF obs info dict from in memory data"""
+        obs_info = time_ref_to_dict(reference_time)
+        obs_info["RA_PNT"] = pointing.icrs.ra.deg
+        obs_info["DEC_PNT"] = pointing.icrs.dec.deg
+        obs_info["DEADC"] = 1 - deadtime_fraction
+        obs_info["TSTART"] = tstart.to("second")
+        obs_info["TSTOP"] = tstop.to("second")
+
+        location = earth_location_from_gadf_irf_header(aeff.meta)
+        obs_info.update(earth_location_to_gadf_events_header(location))
+        return obs_info
 
     @classmethod
     def create(
@@ -180,8 +204,13 @@ class Observation:
 
         gti = GTI.create([tstart], [tstop], reference_time=reference_time)
 
-        obs_info = cls._get_obs_info(
-            pointing=pointing, deadtime_fraction=deadtime_fraction
+        obs_info = cls._get_obs_info_gadf(
+            pointing=pointing,
+            deadtime_fraction=deadtime_fraction,
+            reference_time=reference_time,
+            tstart=tstart,
+            tstop=tstop,
+            aeff=irfs.get("aeff"),
         )
 
         return cls(
@@ -244,7 +273,7 @@ class Observation:
     @lazyproperty
     def fixed_pointing_info(self):
         """Fixed pointing info for this observation (`FixedPointingInfo`)."""
-        return FixedPointingInfo(self.events.table.meta)
+        return FixedPointingInfo(self.obs_info)
 
     @property
     def pointing_radec(self):
